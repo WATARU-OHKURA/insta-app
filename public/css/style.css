@@ -1,0 +1,72 @@
+/*
+ * SMALL
+*/
+
+/* navbar icons */
+/* titles.blade.php */
+/* posts/show.blade.php */
+/* Suggestions in homepage */
+/* following.blade.php */
+/* followers.blade.php */
+
+.icon-sm {
+    font-size: 2rem;
+}
+
+/* delete post(modal) */
+/* admin/posts/index.blade.php */
+/* hide post (modal) */
+.image-lg {
+    width: 9rem;
+    height: 9rem;
+    object-fit: cover;
+}
+
+/* Like button */
+.fa-heart {
+    font-size: 1.5rem;
+}
+
+/* EXTRA SMALL FONT SIZE */
+/* date - body.blade.php */
+/* date, delete - comments.blade.php */
+/* date - posts/show.blade.php */
+/* subtext - suggestions.blade.php */
+.xsmall {
+    font-size: 0.65rem;
+}
+
+/* LARGE */
+.icon-lg {
+    font-size: 9rem;
+}
+
+.icon-md {
+    font-size: 3.5rem;
+}
+
+/* Profile page grid image */
+.grid-img {
+    width: 100%;
+    height: 300px;
+    object-fit: cover;
+}
+
+.avatar-lg {
+    width: 9rem;
+    height: 9rem;
+    object-fit: cover;
+}
+
+.avatar-sm {
+    width: 2.3rem;
+    height: 2.3rem;
+    object-fit: cover;
+}
+
+.avatar-md {
+    width: 3.5em;
+    height: 3.5em;
+    object-fit: cover;
+}
+
