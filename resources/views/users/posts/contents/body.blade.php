@@ -9,7 +9,8 @@
     <div class="row align-items-center">
         <div class="col-auto">
             @if ($post->isLiked())
-                <form action="{{ route('like.destroy', $post->id) }}" method="POST" class="like-form" data-post-id="{{ $post->id }}">
+                <form action="{{ route('like.destroy', $post->id) }}" method="POST" class="like-form"
+                    data-post-id="{{ $post->id }}">
                     @csrf
                     @method('DELETE')
 
@@ -18,7 +19,8 @@
                     </button>
                 </form>
             @else
-                <form action="{{ route('like.store', $post->id) }}" method="POST" class="like-form" data-post-id="{{ $post->id }}">
+                <form action="{{ route('like.store', $post->id) }}" method="POST" class="like-form"
+                    data-post-id="{{ $post->id }}">
                     @csrf
 
                     <button type="submit" class="btn btn-sm shadow-none p-0 like-button">
@@ -48,7 +50,8 @@
     </div>
 
     {{-- owner + description --}}
-    <a href="{{ route('profile.show', $post->user->id) }}" class="text-decoration-none text-dark fw-bold">{{ $post->user->name }}</a>
+    <a href="{{ route('profile.show', $post->user->id) }}"
+        class="text-decoration-none text-dark fw-bold">{{ $post->user->name }}</a>
     &nbsp;
     <p class="d-inline fw-light">{{ $post->description }}</p>
     <p class="text-uppercase text-muted xsmall">{{ date('M d, Y', strtotime($post->created_at)) }}</p>
@@ -58,57 +61,80 @@
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', () => {
+        // Echoが利用可能な場合、リアルタイムのLike更新をリッスン
         if (typeof Echo !== 'undefined') {
-            Echo.channel('post.' + {{ $post->id }})
-                .listen('LikeUpdated', (e) => {
-                    document.querySelector('.likes-count-' + e.post.id).innerText = e.post.likes_count;
+            const postId = '{{ $post->id }}';
+            Echo.channel(`post.${postId}`)
+                .listen('LikeUpdated', (event) => {
+                    const likesCountElem = document.querySelector(`.likes-count-${event.post.id}`);
+                    if (likesCountElem) {
+                        likesCountElem.innerText = event.post.likes_count;
+                    }
                 });
         }
 
+        /**
+         * Likeボタンの表示状態を更新する
+         * @param {HTMLFormElement} form - 対象のフォーム
+         * @param {Object} response - axiosのレスポンスオブジェクト
+         * @param {String} method - 現在のHTTPメソッド（'POST' or 'DELETE'）
+         */
+        const updateLikeButton = (form, response, method) => {
+            const postId = form.getAttribute('data-post-id');
+            const likesCountElem = document.querySelector(`.likes-count-${postId}`);
+            if (likesCountElem) {
+                likesCountElem.innerText = response.data.likes_count;
+            }
+
+            const heartIcon = form.querySelector('i');
+            if (method === 'DELETE') {
+                // いいね解除：アイコンを空ハートに戻し、フォームの状態を初期化
+                heartIcon.classList.replace('fa-solid', 'fa-regular');
+                heartIcon.classList.remove('text-danger');
+                form.action = `{{ route('like.store', $post->id) }}`;
+                const methodInput = form.querySelector('input[name="_method"]');
+                if (methodInput) {
+                    methodInput.remove();
+                }
+            } else {
+                // いいね追加：アイコンを実体ハートに切り替え、フォームのアクションを削除用に変更
+                heartIcon.classList.replace('fa-regular', 'fa-solid');
+                heartIcon.classList.add('text-danger');
+                if (!form.querySelector('input[name="_method"]')) {
+                    const hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.name = '_method';
+                    hiddenInput.value = 'DELETE';
+                    form.appendChild(hiddenInput);
+                }
+                form.action = `{{ route('like.destroy', $post->id) }}`;
+            }
+        };
+
+        // 各Likeフォームに対して非同期送信のイベントリスナーを設定
         document.querySelectorAll('.like-form').forEach(form => {
-            form.addEventListener('submit', function(event) {
+            form.addEventListener('submit', async (event) => {
                 event.preventDefault();
-                let postId = this.getAttribute('data-post-id');
-                let formData = new FormData(this);
-                let method = formData.get('_method') || 'POST';
-                let url = this.action;
-                let submitButton = this.querySelector('button[type="submit"]');
 
-                // ボタンを無効化
-                submitButton.disabled = true;
+                const formData = new FormData(form);
+                const method = formData.get('_method') || 'POST';
+                const url = form.action;
+                const submitButton = form.querySelector('button[type="submit"]');
+                submitButton.disabled = true; // 重複送信防止
 
-                axios({
-                    method: method,
-                    url: url,
-                    data: formData
-                }).then(response => {
-                    document.querySelector('.likes-count-' + postId).innerText = response.data.likes_count;
-                    let heartIcon = this.querySelector('i');
-                    if (method === 'DELETE') {
-                        heartIcon.classList.remove('fa-solid', 'fa-heart', 'text-danger');
-                        heartIcon.classList.add('fa-regular', 'fa-heart');
-                        this.action = `{{ route('like.store', $post->id) }}`;
-                        const methodInput = this.querySelector('input[name="_method"]');
-                        if (methodInput) {
-                            methodInput.remove();
-                        }
-                    } else {
-                        heartIcon.classList.remove('fa-regular', 'fa-heart');
-                        heartIcon.classList.add('fa-solid', 'fa-heart', 'text-danger');
-                        let hiddenInput = document.createElement('input');
-                        hiddenInput.setAttribute('type', 'hidden');
-                        hiddenInput.setAttribute('name', '_method');
-                        hiddenInput.setAttribute('value', 'DELETE');
-                        this.appendChild(hiddenInput);
-                        this.action = `{{ route('like.destroy', $post->id) }}`;
-                    }
-                }).catch(error => {
-                    console.error('Error:', error);
-                }).finally(() => {
-                    // ボタンを再度有効化
+                try {
+                    const response = await axios({
+                        method,
+                        url,
+                        data: formData
+                    });
+                    updateLikeButton(form, response, method);
+                } catch (error) {
+                    console.error('Like更新エラー:', error);
+                } finally {
                     submitButton.disabled = false;
-                });
+                }
             });
         });
     });
